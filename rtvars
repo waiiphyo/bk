@@ -1,0 +1,61 @@
+#!/bin/bash
+
+#bkDir=/backup/SBS-ConfigDATA
+bkDir=/nfs/backup/RT-Backup
+timeFormat=$(date "+%Y-%m-%d")
+
+servers[0]="rt-prod"
+isbk[0]=true
+lists[0]="/etc/mysql /etc/apache2 /etc/hosts /etc/hostname /etc/network/interfaces /etc/passwd /etc/ssh/sshd_config /etc/pam.d /etc/sysctl.d/ /etc/ssl /usr/local/bin /etc/group /etc/fstab /etc/sudoers.d /opt/rt5"
+isdb[0]=false
+db[0]=''
+isexclude[0]=true
+excludelist[0]="/opt/rt5/var/mason_data /opt/rt5/var/session_data /opt/rt5/var/log"
+
+servers[1]="rt-db01"
+isbk[1]=true
+lists[1]="/etc/mysql /etc/hosts /etc/hostname /etc/network/interfaces /etc/passwd /etc/ssh/sshd_config /etc/pam.d /etc/sysctl.d/ /etc/ssl /usr/local/bin /etc/group /etc/fstab /etc/sudoers.d"
+isdb[1]=true
+db[1]='rt5'
+isexclude[1]=false
+excludelist[1]=""
+
+servers[2]="rt-db02"
+isbk[2]=true
+lists[2]="/etc/mysql /etc/hosts /etc/hostname /etc/network/interfaces /etc/passwd /etc/ssh/sshd_config /etc/pam.d /etc/sysctl.d/ /etc/ssl /usr/local/bin /etc/group /etc/fstab /etc/sudoers.d"
+isdb[2]=false
+db[2]=''
+isexclude[2]=false
+excludelist[2]=""
+
+servers[3]="rt-db-lb01"
+isbk[3]=true
+lists[3]="/etc/mysql /etc/hosts /etc/hostname /etc/network/interfaces /etc/passwd /etc/ssh/sshd_config /etc/pam.d /etc/sysctl.d/ /etc/ssl /usr/local/bin /etc/group /etc/fstab /etc/sudoers.d"
+isdb[3]=false
+db[3]=''
+isexclude[3]=false
+excludelist[3]=""
+
+servers[4]="rt-db04"
+isbk[4]=true
+lists[4]="/etc/mysql /etc/hosts /etc/hostname /etc/network/interfaces /etc/passwd /etc/ssh/sshd_config /etc/pam.d /etc/sysctl.d/ /etc/ssl /usr/local/bin /etc/group /etc/fstab /etc/sudoers.d /etc/mysql/my.cnf"
+isdb[4]=true
+db[4]='rt5'
+isexclude[4]=false
+excludelist[4]=""
+
+servers[5]="rt-web-lb"
+isbk[5]=true
+lists[5]="/etc/hosts /etc/hostname /etc/network/interfaces /etc/passwd /etc/ssh/sshd_config /etc/pam.d /etc/sysctl.d/ /etc/ssl /usr/local/bin /etc/group /etc/fstab /etc/sudoers.d /etc/nginx"
+isdb[5]=false
+db[5]=''
+isexclude[5]=false
+excludelist[5]=""
+
+servers[6]="rt-web02"
+isbk[6]=true
+lists[6]="/etc/mysql /etc/apache2 /etc/hosts /etc/hostname /etc/network/interfaces /etc/passwd /etc/ssh/sshd_config /etc/pam.d /etc/sysctl.d/ /etc/ssl /usr/local/bin /etc/group /etc/fstab /etc/sudoers.d /opt/rt5 /var/RT-Run/scriptforRT-6-45-v2.sh /var/spool/cron/crontabs /root/tools"
+isdb[6]=false
+db[6]=''
+isexclude[6]=false
+excludelist[6]=""

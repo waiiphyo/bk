@@ -1,0 +1,155 @@
+#!/bin/bash
+#Compress function
+function compressit()
+{
+# Need at least 2 arguments
+# arg 1 - Destination output tgz filename
+# arg 2 - Source file to compress
+if [ ! $# -ge 2 ]; then return 1;fi
+	fOut=$1
+	fIn=$2
+	# Source must exists
+	if [ ! -e $fIn ]; then return 1;fi
+	fIn=$(readlink -e $fIn)
+	# get Last Character of Source
+	#tmpLC=$(echo "${fIn: -1}")
+	#tmpLC=$(echo $fIn | cut -c1)
+	# If '/' , then remove it
+	#if [ "$tmpLC" = "/" ]; then fIn=$(echo $fIn|cut -c2-); fi #fIn=$(echo "${fIn%?}"); fi
+	result=(tar -zcf $fOut.tgz $fIn)
+	# Return status
+	if [ $? -eq 0 ]; then
+		# Return Success
+		return 0
+	else
+		# Return Fail
+	return 1
+fi
+}
+
+function compare2local()
+{
+# arg 1 - tgz file to compare with local file
+if [ ! $# -ge 1 ]; then
+	return 1;
+else
+	tgzFile=$1
+	if [ ! -e $tgzFile ]; then
+		return 1;
+	else
+		curDir=$(pwd)
+		tgzFile=$(readlink -e $tgzFile)
+		cd /
+		fChanges=$(tar dzf $tgzFile |  grep "Size differs" | cut -d : -f1)
+		if [ "$fChanges" != "" ]; then
+			echo "Here are the chagess files from since last backup of $tgzFile -";
+			for f in $fChanges
+				do
+				echo $f;
+				stat /$f
+			done
+		cd $curDir
+		return 0
+		else
+			echo "There is no changes since last backup!"
+			cd $curDir
+			return 1
+		fi
+	fi
+fi
+}
+
+function checkHost()
+{
+if [ ! $# -ge 1 ]; then return 1; fi
+ping $1 -c 1 > /dev/null 2>&1
+return $?
+}
+
+function processBackupList()
+{
+if [ ! $# -ge 1 ]; then return 1; fi
+if [ "$1" = "" ]; then return 1; fi
+svr=$1;
+totalCount=${#servers[@]};
+#echo -- ${servers[$svr]}, total count - $totalCount -- $svr;
+if [ $totalCount -ge $svr ]; then
+	echo "Backing up Server [ ${servers[$svr]} ] ..."
+	nodes=$(echo ${lists[$svr]})
+	echo List to Backup: ${lists[$svr]};
+	state=1
+
+	#isexclude[0]=false
+	#excludelist[0]=""
+	# check tar exclude is true
+	if ${isexclude[$svr]}; then
+		# if true, build exclude string
+		ex_list=$(echo ${excludelist[$svr]})	
+		ex_pattern=
+		for ex in $ex_list
+		do
+			echo $ex
+			ex_pattern="$ex_pattern --exclude=$ex "
+		done
+		echo "Exclude Pattern is [$ex_pattern]"
+		echo
+	fi
+	for node in $nodes
+        do
+                lastchar=$(echo ${node: -1})
+                if [ "$lastchar" != "" ] || [ "$lastchar" = "" ]; then
+                        # lastword=$(echo $list | awk -F/ '{printf $NF}')
+                        bkFileName=$(echo $node | tr '/' '_')
+                        echo -en "Saving $bkDir/$timeFormat/${servers[$svr]}/$bkFileName.tgz ... "
+	                if [ ! -e $bkDir/$timeFormat/$svr ]; then mkdir -p $bkDir/$timeFormat/${servers[$svr]}; fi
+			if ${isexclude[$svr]}; then
+				ssh ${servers[$svr]} "sudo tar zcf - $node $ex_pattern" > $bkDir/$timeFormat/${servers[$svr]}/$bkFileName.tgz #> /dev/null 2>&1
+                        else
+				ssh ${servers[$svr]} "sudo tar zcf - $node" > $bkDir/$timeFormat/${servers[$svr]}/$bkFileName.tgz #> /dev/null 2>&1
+			fi
+			if [ $? -eq 0 ]; then
+				bkinfo=$(getsize $bkDir/$timeFormat/${servers[$svr]}/$bkFileName.tgz)
+				echo -en "[`date`] -- Saving $bkDir/$timeFormat/${servers[$svr]}/$bkFileName.tgz : Done $bkinfo\n"
+				state=0
+			else
+				echo -en "[`date`] -- Saving $bkDir/$timeFormat/${servers[$svr]}/$bkFileName.tgz : Error\n"
+				state=1
+			fi
+                fi
+        done
+	if ${isdb[$i]}; then
+			tmpdbs=$(echo ${db[$svr]})
+			echo;echo "Backing up databases..."
+			for tmpdb in $tmpdbs
+			do
+				if ${sshdb[$i]}; then
+					
+				#else
+					mysqldump -h ${servers[$svr]} $tmpdb --lock-tables=false --ignore-table=rt5.sessions --ignore-table=rt5.Attachments --single-transaction --skip-extended-insert --no-tablespaces | gzip > $bkDir/$timeFormat/${servers[$svr]}/$tmpdb.sql.gz
+					mysqldump -h ${servers[$svr]} $tmpdb Attachments --lock-tables=false --single-transaction --skip-extended-insert --no-tablespaces | gzip > $bkDir/$timeFormat/${servers[$svr]}/$tmpdb-attachments.sql.gz				
+	#scp ${servers[$svr]}:~/dbbackup/$tmpdb.sql.gzip $bkDir/$timeFormat/${servers[$svr]}/$tmpdb.sql.gz
+				echo "Tar with Exclude [$ex_pattern]"
+				fi
+				if [ $? -eq 0 ]; then
+					bkinfo=$(getsize $bkDir/$timeFormat/${servers[$svr]}/$tmpdb.sql.gz)
+					echo -en "[`date`] -- Saving $bkDir/$timeFormat/${servers[$svr]}/$tmpdb.sql.gz  : Done $bkinfo\n"
+					state=0
+				else
+					echo -en "[`date`] -- Saving $bkDir/$timeFormat/${servers[$svr]}/$tmpdb.sql.gz  : Error\n"
+					state=1
+				fi
+			done
+	fi
+	return $state;
+else 
+	return 1;
+fi
+}
+
+function getsize()
+{
+ fname=$1
+ strSize=$(gzip -l $fname | grep -v compress)
+ read ccSize unccSize ratio other <<< $strSize
+ echo "[ compress: $ccSize, normal: $unccSize, Ratio: $ratio]"
+}
